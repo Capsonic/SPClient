@@ -1,6 +1,8 @@
 ﻿using Microsoft.SharePoint.Client;
+using OfficeOpenXml;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Threading.Tasks;
 
@@ -15,7 +17,7 @@ namespace SPClient
         private ClientContext clientContext;
         public bool ContinueSearching { get; set; }
 
-        public void Login(string url, string userName, string password)
+        public bool Login(string url, string userName, string password)
         {
             clientContext = new ClientContext(url);
             clientContext.Credentials = new NetworkCredential(userName, password, "capsonic");
@@ -26,6 +28,7 @@ namespace SPClient
             baseWeb = clientContext.Web;
             clientContext.Load(baseWeb, f => f.Folders, f => f.Title);
             clientContext.ExecuteQuery();
+            return true;
         }
 
         Task loadFoldersAndFilesAsync(Folder parentFolder)
@@ -37,9 +40,7 @@ namespace SPClient
             });
         }
 
-
-        
-        private async Task readFiles(Folder parentFolder, IList<FileItem> filesList,  
+        private async Task readFiles(Folder parentFolder, IList<FileItem> filesList,
             string folderLike = "", string fileLike = "")
         {
             //Console.WriteLine(parentFolder.ServerRelativeUrl);
@@ -54,7 +55,7 @@ namespace SPClient
                     await readFiles(folder, filesList, folderLike, fileLike);
                 }
 
-                foreach (File file in parentFolder.Files)
+                foreach (Microsoft.SharePoint.Client.File file in parentFolder.Files)
                 {
                     if (file.Name.Contains(fileLike) || parentFolder.Name.Contains(folderLike))
                     {
@@ -68,7 +69,7 @@ namespace SPClient
                             });
 
                             Console.WriteLine(" Folder: " + parentFolder.ServerRelativeUrl + " \tFile Name: " + file.Name);
-                        }   
+                        }
                     }
                 }
             }
@@ -109,9 +110,66 @@ namespace SPClient
 
         public class FileItem
         {
+            public FileItem()
+            {
+                IsSelected = true;
+            }
             public string FileName { get; set; }
             public string FolderName { get; set; }
             public string Status { get; set; }
+            public bool IsSelected { get; set; }
+            public FileItem Clone()
+            {
+                return new FileItem()
+                {
+                    FileName = FileName,
+                    FolderName = FolderName,
+                    IsSelected = IsSelected,
+                    Status = Status
+                };
+            }
+        }
+
+
+        public bool Update(IList<FileItem> FileItemsList)
+        {
+            foreach (var item in FileItemsList)
+            {
+                string fileAddress = item.FolderName + "/" + item.FileName;
+                Folder baseFolder = clientContext.Web.GetFolderByServerRelativeUrl(item.FolderName);
+                Microsoft.SharePoint.Client.File currentFile = clientContext.Web.GetFileByServerRelativeUrl(fileAddress);
+                clientContext.Load(baseFolder);
+                clientContext.Load(currentFile);
+                clientContext.ExecuteQuery();
+                if (currentFile.CheckOutType == CheckOutType.None)
+                {
+                    currentFile.CheckOut();
+                    clientContext.ExecuteQuery();
+
+                    FileCreationInformation fileUpdated = new FileCreationInformation();
+                    FileInformation fileInformation = Microsoft.SharePoint.Client.File.OpenBinaryDirect(clientContext, item.FolderName + "/" + item.FileName);
+                    MemoryStream ms = new MemoryStream();
+                    fileInformation.Stream.CopyTo(ms);
+                    fileUpdated.Content = OpenFile(ms);
+                    fileUpdated.Overwrite = true;
+                    fileUpdated.Url = clientContext.Url.Substring(0, clientContext.Url.IndexOf(".com") + 4) + fileAddress;
+
+                    baseFolder.Files.Add(fileUpdated);
+                    currentFile.CheckIn("test", CheckinType.MinorCheckIn);
+                    clientContext.ExecuteQuery();
+                }
+            }
+            return true;
+        }
+
+        private byte[] OpenFile(Stream fileStream)
+        {
+            using (var p = new ExcelPackage(fileStream))
+            {
+                ExcelWorksheet ws = p.Workbook.Worksheets[1];
+                ws.Cells[1, 1].Value = "Desde sharepoint client.";
+                return p.GetAsByteArray();
+            }
         }
     }
 }
