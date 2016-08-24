@@ -131,32 +131,66 @@ namespace SPClient
         }
 
 
-        public bool Update(IList<FileItem> FileItemsList)
+        public bool Process(IList<FileItem> fileItemsList, IList<IExcelUpdateProcess> processes)
         {
-            foreach (var item in FileItemsList)
+            foreach (var item in fileItemsList)
             {
-                string fileAddress = item.FolderName + "/" + item.FileName;
-                Folder baseFolder = clientContext.Web.GetFolderByServerRelativeUrl(item.FolderName);
-                Microsoft.SharePoint.Client.File currentFile = clientContext.Web.GetFileByServerRelativeUrl(fileAddress);
-                clientContext.Load(baseFolder);
-                clientContext.Load(currentFile);
-                clientContext.ExecuteQuery();
-                if (currentFile.CheckOutType == CheckOutType.None)
+                if (item.IsSelected)
                 {
-                    currentFile.CheckOut();
+                    string fileAddress = item.FolderName + "/" + item.FileName;
+                    Folder baseFolder = clientContext.Web.GetFolderByServerRelativeUrl(item.FolderName);
+                    Microsoft.SharePoint.Client.File currentFile = clientContext.Web.GetFileByServerRelativeUrl(fileAddress);
+                    clientContext.Load(baseFolder);
+                    clientContext.Load(currentFile);
                     clientContext.ExecuteQuery();
+                    if (currentFile.CheckOutType == CheckOutType.None)
+                    {
+                        currentFile.CheckOut();
+                        clientContext.ExecuteQuery();
 
-                    FileCreationInformation fileUpdated = new FileCreationInformation();
-                    FileInformation fileInformation = Microsoft.SharePoint.Client.File.OpenBinaryDirect(clientContext, item.FolderName + "/" + item.FileName);
-                    MemoryStream ms = new MemoryStream();
-                    fileInformation.Stream.CopyTo(ms);
-                    fileUpdated.Content = OpenFile(ms);
-                    fileUpdated.Overwrite = true;
-                    fileUpdated.Url = clientContext.Url.Substring(0, clientContext.Url.IndexOf(".com") + 4) + fileAddress;
+                        FileCreationInformation fileUpdated = new FileCreationInformation();
+                        FileInformation fileInformation = Microsoft.SharePoint.Client.File.OpenBinaryDirect(clientContext, item.FolderName + "/" + item.FileName);
+                        MemoryStream ms = new MemoryStream();
+                        fileInformation.Stream.CopyTo(ms);
 
-                    baseFolder.Files.Add(fileUpdated);
-                    currentFile.CheckIn("test", CheckinType.MinorCheckIn);
-                    clientContext.ExecuteQuery();
+                        bool quitBecauseOfError = false;
+                        using (var p = new ExcelPackage(ms))
+                        {
+                            foreach (var process in processes)
+                            {
+                                if (!process.Execute(p))
+                                {
+                                    item.Status = process.ErrorMessage;
+                                    quitBecauseOfError = true;
+                                    break;
+                                }
+                            }
+                            if (!quitBecauseOfError)
+                            {
+                                fileUpdated.Content = p.GetAsByteArray();
+                            }
+                        }
+
+                        if (quitBecauseOfError)
+                        {
+                            currentFile.UndoCheckOut();
+                            clientContext.ExecuteQuery();
+                        }
+                        else
+                        {
+                            fileUpdated.Overwrite = true;
+                            fileUpdated.Url = clientContext.Url.Substring(0, clientContext.Url.IndexOf(".com") + 4) + fileAddress;
+
+                            baseFolder.Files.Add(fileUpdated);
+                            currentFile.CheckIn("test", CheckinType.MinorCheckIn);
+                            clientContext.ExecuteQuery();
+                            item.Status = "Processed";
+                        }
+                    }
+                    else
+                    {
+                        item.Status = "File is Checked Out by: " + currentFile.CheckedOutByUser.LoginName;
+                    }
                 }
             }
             return true;

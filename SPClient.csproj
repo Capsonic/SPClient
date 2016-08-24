@@ -44,6 +44,8 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -52,11 +54,24 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ExcelProcesses\ExcelProcess_AddVBAModule.cs" />
+    <Compile Include="ExcelProcesses\ExcelProcess_CompareAndSetVersion.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ExcelProcesses\ExcelProcess_CompareAndSetVersion.Designer.cs">
+      <DependentUpon>ExcelProcess_CompareAndSetVersion.cs</DependentUpon>
+    </Compile>
+    <Compile Include="IExcelUpdateProcess.cs" />
     <Compile Include="SP.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="ExcelProcesses\ExcelProcess_CompareAndSetVersion.resx">
+      <DependentUpon>ExcelProcess_CompareAndSetVersion.cs</DependentUpon>
+    </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
