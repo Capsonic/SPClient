@@ -1,4 +1,5 @@
-﻿using OfficeOpenXml;
+﻿using System;
+using OfficeOpenXml;
 using OfficeOpenXml.VBA;
 
 namespace SPClient
@@ -17,9 +18,15 @@ namespace SPClient
             Type = type;
         }
 
+        public bool IsConfigured { get; set; }
+
         public string VBA_Content { get; set; }
         public string Name { get; set; }
         public ModuleType Type { get; set; }
+
+        public string Title { get { return "Add VBA Module"; } }
+        public int MyProperty { get; set; }
+
         public enum ModuleType
         {
             MODULE,
@@ -46,6 +53,11 @@ namespace SPClient
             }
             module.Code = VBA_Content;
             return true;
+        }
+
+        public bool Configure()
+        {
+            throw new NotImplementedException();
         }
     }
 }

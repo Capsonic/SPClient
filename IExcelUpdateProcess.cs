@@ -9,7 +9,10 @@ namespace SPClient
 {
     public interface IExcelUpdateProcess
     {
+        string Title { get; }
         bool Execute(ExcelPackage p);
         string ErrorMessage { get; set; }
+        bool IsConfigured { get; set; }
+        bool Configure();
     }
 }

@@ -13,6 +13,10 @@ namespace SPClient
 
         public string ErrorMessage { get; set; }
 
+        public bool IsConfigured { get; set; }
+
+        public string Title { get { return "Compare and Set Version"; } }
+
         public bool Execute(ExcelPackage p)
         {
             ErrorMessage = "";
@@ -69,7 +73,20 @@ namespace SPClient
 
         private void btnOK_Click(object sender, EventArgs e)
         {
+            IsConfigured = true;
             Hide();
+        }
+
+        private void btnCancel_Click(object sender, EventArgs e)
+        {
+            IsConfigured = false;
+            Hide();
+        }
+
+        public bool Configure()
+        {
+            ShowDialog();
+            return IsConfigured;
         }
     }
 }
