@@ -39,6 +39,11 @@ namespace SPClient
                     }
                     break;
                 case "Equals To":
+                    if (currentVersion == null)
+                    {
+                        ErrorMessage = "This file has no version";
+                        return false;
+                    }
                     if (currentVersion.ToLower().Trim() != txtCompareVersion.Text.ToLower().Trim())
                     {
                         ErrorMessage = "Not the version specified.";
@@ -46,6 +51,11 @@ namespace SPClient
                     }
                     break;
                 case "Less Than":
+                    if (currentVersion == null)
+                    {
+                        ErrorMessage = "This file has no version";
+                        return false;
+                    }
                     iCurrentVersion = int.Parse(currentVersion);
                     iVersionThan = txtCompareVersion.Text != "" ? int.Parse(txtCompareVersion.Text) : (int?)null;
                     if (iCurrentVersion >= iVersionThan)
@@ -55,6 +65,11 @@ namespace SPClient
                     }
                     break;
                 case "Greater Than":
+                    if (currentVersion == null)
+                    {
+                        ErrorMessage = "This file has no version";
+                        return false;
+                    }
                     iCurrentVersion = int.Parse(currentVersion);
                     iVersionThan = txtCompareVersion.Text != "" ? int.Parse(txtCompareVersion.Text) : (int?)null;
                     if (iCurrentVersion <= iVersionThan)

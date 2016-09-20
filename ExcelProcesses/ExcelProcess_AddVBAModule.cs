@@ -1,63 +1,55 @@
 ﻿using System;
+using System.Windows.Forms;
 using OfficeOpenXml;
 using OfficeOpenXml.VBA;
+using System.Text;
 
-namespace SPClient
+namespace SPClient.ExcelProcesses
 {
-    /**
-     * Add vba module/class, replace if exists
-     * */
-    public class ExcelProcess_AddVBAModule : IExcelUpdateProcess
+    public partial class ExcelProcess_AddVBAModule : Form, IExcelUpdateProcess
     {
-        public string ErrorMessage { get; set; }
-
-        public ExcelProcess_AddVBAModule(string name, string vba_content, ModuleType type)
+        public ExcelProcess_AddVBAModule()
         {
-            Name = name;
-            VBA_Content = vba_content;
-            Type = type;
+            InitializeComponent();
         }
+
+        public string ErrorMessage { get; set; }
 
         public bool IsConfigured { get; set; }
 
-        public string VBA_Content { get; set; }
-        public string Name { get; set; }
-        public ModuleType Type { get; set; }
+        public string Title { get { return "Update VBA code."; } }
 
-        public string Title { get { return "Add VBA Module"; } }
-        public int MyProperty { get; set; }
-
-        public enum ModuleType
+        public bool Configure()
         {
-            MODULE,
-            CLASS
+            ShowDialog();
+            return IsConfigured;
         }
 
         public bool Execute(ExcelPackage p)
         {
-            ExcelVBAModule module;
-            if (p.Workbook.VbaProject.Modules.Exists(Name))
+            if (p.Workbook.VbaProject.Modules.Exists(txtName.Text.Trim()))
             {
-                module = p.Workbook.VbaProject.Modules[Name];
+                var module = p.Workbook.VbaProject.Modules[txtName.Text.Trim()];
+                module.Code = txtContent.Text;
             }
             else
             {
-                if (Type == ModuleType.CLASS)
-                {
-                    module = p.Workbook.VbaProject.Modules.AddClass(Name, true);
-                }
-                else
-                {
-                    module = p.Workbook.VbaProject.Modules.AddModule(Name);
-                }
+                ErrorMessage = "Non-existent module: " + txtName.Text.Trim();
+                return false;
             }
-            module.Code = VBA_Content;
             return true;
         }
 
-        public bool Configure()
+        private void btnOK_Click(object sender, EventArgs e)
         {
-            throw new NotImplementedException();
+            IsConfigured = true;
+            Hide();
+        }
+
+        private void btnCancel_Click(object sender, EventArgs e)
+        {
+            IsConfigured = false;
+            Hide();
         }
     }
 }

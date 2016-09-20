@@ -6,6 +6,8 @@ using System.IO;
 using System.Net;
 using System.Threading.Tasks;
 
+
+
 namespace SPClient
 {
     public class SP
@@ -57,7 +59,7 @@ namespace SPClient
 
                 foreach (Microsoft.SharePoint.Client.File file in parentFolder.Files)
                 {
-                    if (file.Name.Contains(fileLike) || parentFolder.Name.Contains(folderLike))
+                    if (file.Name.Contains(fileLike.Trim()) || parentFolder.Name.Contains(folderLike.Trim()))
                     {
                         if (file.Name.Substring(file.Name.Length - 4) == ".xls" || file.Name.Substring(file.Name.Length - 4) == "xlsx"
                             || file.Name.Substring(file.Name.Length - 4) == "xlsm")
@@ -114,10 +116,10 @@ namespace SPClient
             {
                 IsSelected = true;
             }
-            public string FileName { get; set; }
-            public string FolderName { get; set; }
-            public string Status { get; set; }
             public bool IsSelected { get; set; }
+            public string FolderName { get; set; }
+            public string FileName { get; set; }
+            public string Status { get; set; }
             public FileItem Clone()
             {
                 return new FileItem()
@@ -149,13 +151,26 @@ namespace SPClient
                         clientContext.ExecuteQuery();
 
                         FileCreationInformation fileUpdated = new FileCreationInformation();
-                        FileInformation fileInformation = Microsoft.SharePoint.Client.File.OpenBinaryDirect(clientContext, item.FolderName + "/" + item.FileName);
-                        MemoryStream ms = new MemoryStream();
-                        fileInformation.Stream.CopyTo(ms);
+
 
                         bool quitBecauseOfError = false;
+
+
+                        FileInformation fileInformation = Microsoft.SharePoint.Client.File.OpenBinaryDirect(clientContext, item.FolderName + "/" + item.FileName);
+                        
+
+                        
+                        MemoryStream ms = new MemoryStream();
+                        fileInformation.Stream.CopyTo(ms);
+                        
                         using (var p = new ExcelPackage(ms))
                         {
+                            //p.Workbook.VbaProject.Protection.SetPassword(null);
+                            //p.Workbook.VbaProject.Remove();
+                            //p.Workbook.CreateVBAProject();
+                            //var description = p.Workbook.VbaProject.Description;
+                            //p.SaveAs(new FileInfo("second.xlsm"));
+
                             foreach (var process in processes)
                             {
                                 if (!process.Execute(p))
@@ -167,7 +182,26 @@ namespace SPClient
                             }
                             if (!quitBecauseOfError)
                             {
+                                //var excelFile = new Microsoft.Office.Interop.Excel.Application();
+                                //var workbook = excelFile.Workbooks.Open("tmpFile.xlsm", false, false, Type.Missing, Type.Missing, Type.Missing, true, Type.Missing, Type.Missing, false, false, Type.Missing, false, true, Type.Missing);
+                                //var project = workbook.VBProject;
+
                                 fileUpdated.Content = p.GetAsByteArray();
+
+                                //using (var newDocument = new ExcelPackage(new FileInfo("tmpFile.xlsm")))
+                                //{
+                                    //for (int i = 1; i < originalDocument.Workbook.Worksheets.Count; i++)
+                                    //{
+                                    //    originalDocument.Workbook.Worksheets[i].Cells.Copy(newDocument.Workbook.Worksheets[i].Cells); 
+                                    //}
+
+
+                                    //originalDocument.Workbook.Worksheets[1].Cells[1, 1].Value = originalDocument.Workbook.Worksheets[1].Cells[1, 1].Value;
+                                    //var description = p.Workbook.VbaProject.Description;
+                                    //p.SaveAs(new FileInfo("second.xlsm"));
+                                    
+                                //}
+
                             }
                         }
 
@@ -183,27 +217,18 @@ namespace SPClient
 
                             baseFolder.Files.Add(fileUpdated);
                             currentFile.CheckIn("test", CheckinType.MinorCheckIn);
+
                             clientContext.ExecuteQuery();
                             item.Status = "Processed";
                         }
                     }
                     else
                     {
-                        item.Status = "File is Checked Out by: " + currentFile.CheckedOutByUser.LoginName;
+                        item.Status = "Not Processed: File is Checked Out";
                     }
                 }
             }
             return true;
-        }
-
-        private byte[] OpenFile(Stream fileStream)
-        {
-            using (var p = new ExcelPackage(fileStream))
-            {
-                ExcelWorksheet ws = p.Workbook.Worksheets[1];
-                ws.Cells[1, 1].Value = "Desde sharepoint client.";
-                return p.GetAsByteArray();
-            }
         }
     }
 }
